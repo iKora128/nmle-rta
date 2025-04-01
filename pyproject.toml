@@ -1,7 +1,7 @@
 [project]
 name = "nmle-rta"
 version = "0.1.0"
-description = "Add your description here"
+description = "nmle-rta is a repository designed to evaluate the performance of Large Language Models (LLMs) using the 119th Japanese Medical Licensing Examination (JMLE). "
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -17,4 +17,7 @@ dependencies = [
     "reportlab>=4.2.5",
     "ruff>=0.9.0",
     "tqdm>=4.67.1",
+    "pandas",
+    "matplotlib",
+    "seaborn",
 ]

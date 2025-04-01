@@ -1,7 +1,7 @@
 import json
 import os
 from datetime import datetime
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 
 class OutputProcessor:
     def __init__(self):
@@ -10,21 +10,25 @@ class OutputProcessor:
         os.makedirs("answer/raw", exist_ok=True)
         os.makedirs("answer/json", exist_ok=True)
 
-    def format_model_response(self, response: str) -> Dict[str, Any]:
-        """モデルの生の応答をパースして構造化データに変換"""
+    def format_model_response(self, response: str) -> Tuple[Dict[str, Any], bool]:
+        """
+        モデルの生の応答をパースして構造化データに変換し、
+        解析が成功したかどうかをboolで返す。
+        """
         result = {
             "answer": None,
             "confidence": None,
             "explanation": None
         }
         
-        # 応答が空または無効な場合のチェック
+        success = True  # 解析が成功したかのフラグ
+        
+        # 応答が空または無効な場合
         if not response or not isinstance(response, str):
             print(f"警告: 無効な応答を受け取りました: {response}")
-            return result
+            return result, False
         
         try:
-            # 応答テキストを行ごとに処理
             lines = response.lower().split('\n')
             for line in lines:
                 line = line.strip()
@@ -38,21 +42,22 @@ class OutputProcessor:
                         print(f"警告: 確信度の変換に失敗: {line}")
                 elif line.startswith('explanation:'):
                     result['explanation'] = line.replace('explanation:', '').strip()
-                
-            # 必須フィールドのチェック
+                    
+            # 必須フィールド（answer）がなければ失敗と判断
             if not result['answer']:
                 print("警告: 回答が見つかりませんでした")
-            
-            return result
-            
+                success = False
+                
         except Exception as e:
-            print(f"応答のパース中にエラーが発生: {str(e)}")
-            print(f"問題の応答: {response}")
-            return result
+            print(f"例外発生: 応答解析中にエラー: {e}")
+            success = False
+        
+        return result, success
 
-    def save_model_output(self, results: List[Dict], model_name: str, timestamp: str) -> None:
+
+    def save_model_output(self, results: List[Dict], model_name: str, file_exp: str) -> None:
         """モデルごとの出力を読みやすい形式でテキストファイルに保存"""
-        output_file = f"answer/raw/{model_name}_{timestamp}.txt"
+        output_file = f"answer/raw/{file_exp}.txt"
 
         with open(output_file, "a", encoding="utf-8") as f:
             for result in results:
@@ -89,9 +94,9 @@ class OutputProcessor:
                 
                 f.write("\n")
 
-    def save_json_output(self, results: List[Dict], timestamp: str) -> None:
+    def save_json_output(self, results: List[Dict], file_exp: str) -> None:
         """結果をJSONファイルとしても保存"""
-        output_file = f"answer/json/results_{timestamp}.json"
+        output_file = f"answer/json/{file_exp}.json"
         
         # JSON用にデータを整形
         formatted_results = []
@@ -124,31 +129,31 @@ class OutputProcessor:
 
         with open(output_file, "w", encoding="utf-8") as f:
             json.dump({
-                "timestamp": timestamp,
+                "experiment_id": file_exp,  # 'timestamp'から'experiment_id'に変更
                 "results": formatted_results
             }, f, ensure_ascii=False, indent=2)
 
-    def clean_old_files(self, timestamp: str) -> None:
-        """古い出力ファイルを削除"""
-        # rawディレクトリの古いファイルを削除
+    def clean_old_files(self, file_exp: str) -> None:
+        """同じ実験名のファイルのみを削除（他の実験は保持）"""
+        # rawディレクトリの同じ実験のファイルを削除
         raw_dir = "answer/raw"
         for file in os.listdir(raw_dir):
-            if file.endswith(".txt") and not file.endswith(f"{timestamp}.txt"):
+            if file.endswith(f"_{file_exp}.txt"):
                 os.remove(os.path.join(raw_dir, file))
 
-        # jsonディレクトリの古いファイルを削除
+        # jsonディレクトリの同じ実験のファイルを削除
         json_dir = "answer/json"
         for file in os.listdir(json_dir):
-            if file.endswith(".json") and not file.endswith(f"{timestamp}.json"):
+            if file.endswith(f"_{file_exp}.json"):
                 os.remove(os.path.join(json_dir, file))
 
-    def process_outputs(self, results: List[Dict], timestamp: str = None) -> None:
+    def process_outputs(self, results: List[Dict], file_exp: str = None) -> None:
         """全ての結果を処理"""
-        if timestamp is None:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        if file_exp is None:
+            file_exp = datetime.now().strftime("%Y%m%d_%H%M%S")
         
-        # 古いファイルを削除
-        self.clean_old_files(timestamp)
+        # 削除機能の呼び出しをコメントアウト
+        # self.clean_old_files(file_exp)
         
         # 使用されているすべてのモデルを特定
         models = set()
@@ -158,7 +163,7 @@ class OutputProcessor:
         
         # モデルごとに1つのファイルに出力
         for model in models:
-            self.save_model_output(results, model, timestamp)
+            self.save_model_output(results, model, file_exp)
         
         # JSON形式で1つのファイルに保存
-        self.save_json_output(results, timestamp) 
+        self.save_json_output(results, file_exp)
