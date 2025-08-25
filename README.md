@@ -235,4 +235,4 @@ uv run main.py question/119A_json.json --questions 119A1 --models claude gpt-4o
 
 ## ライセンス
 このリポジトリは Apache License 2.0 のもとで公開されています。詳細は LICENSE ファイルをご確認ください。
-また `/question`, `images` 配下の第119回医師国家試験のデータについてはレポジトリ管理者である長嶋大地が改変・編集し、 CC BY 4.0 のもとで管理されています。
+また `/question`, `images` 配下のデータについては厚生労働省が公表する第119回医師国家試験問題を元に作成。レポジトリ管理者が改変・編集し、 CC BY 4.0 のもとで管理されています。
